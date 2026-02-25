@@ -22,6 +22,16 @@ public class Chess {
 		result.piecesOnBoard = pieces;
 
 		String trimmedMove = move.trim();
+		
+		if (trimmedMove.equals("resign")) {
+			if (currentPlayer == Player.black) {
+				result.message = ReturnPlay.Message.RESIGN_WHITE_WINS;
+			}
+			else {result.message = ReturnPlay.Message.RESIGN_BLACK_WINS;}
+			return result;
+			//ReturnPlay instance with pieces on board same as previous state of the board
+		}
+
 		char fromFileChar = trimmedMove.charAt(0);
 		int fromRank = trimmedMove.charAt(1) - '0';
 		char toFileChar = trimmedMove.charAt(3);
@@ -53,6 +63,9 @@ public class Chess {
 			return result;
 		}
 
+		
+		
+
 		//Check if there is piece where we are trying to move
 		ReturnPiece pieceToTake = null;
 		for (ReturnPiece p : pieces) {
@@ -65,14 +78,26 @@ public class Chess {
 				result.message = ReturnPlay.Message.ILLEGAL_MOVE;
 				return result;
 			}
-			else {
-				pieces.remove(pieceToTake);
-			}
 		}
+
+		//Check to make sure this piece can move in this way
+		if (CheckMove(pieceToMove, fromFile, fromRank, toFile, toRank, pieceToTake) == false) {
+			result.message = ReturnPlay.Message.ILLEGAL_MOVE;
+			return result;
+		}
+		pieces.remove(pieceToTake);
 
 		//Move piece
 		pieceToMove.pieceFile = toFile;
 		pieceToMove.pieceRank = toRank;
+		
+		if (trimmedMove.length() > 5) {
+			if (trimmedMove.substring(6).equals("draw?")) {
+				result.message = ReturnPlay.Message.DRAW;
+				//ReturnPlay instance with pieces on board after move is executed
+			}
+		}
+		
 		
 		//Switch player
 		if (currentPlayer == Player.white) {
@@ -86,7 +111,7 @@ public class Chess {
 		/*
 		TO ADD:
 		Rules for each piece's movement
-		Logic for special moves: castling, promotion, resign, draw
+		Logic for special moves: castling, promotion
 		Checks, checkmate, stalemate
 		Can't make moves that place you in check
 		*/
@@ -167,4 +192,45 @@ public class Chess {
 			pieces.add(back);
 		}
 	}	
+
+	public static boolean CheckMove(ReturnPiece piece, ReturnPiece.PieceFile fromFile, int fromRank, ReturnPiece.PieceFile toFile, int toRank, ReturnPiece pieceToTake) {
+		int fileDiff = Math.abs(fromFile.ordinal() - toFile.ordinal());
+		int rankDiff = toRank - fromRank;
+
+		//White pawn
+		if (piece.pieceType.equals(ReturnPiece.PieceType.WP)) {
+			if (pieceToTake == null) {
+				if ((fileDiff == 0) && (rankDiff == 1 || (rankDiff == 2 && fromRank == 2))) {
+					//if you're not taking a piece, you are not changing files.
+					//you can move 1 space forward, or two if you are at rank 2.
+					return true;
+				}
+			}
+			else {
+				if (fileDiff == 1 & rankDiff == 1) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		//Black Pawn: Same logic as white but rankDiff is negative (moves down)
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BP)) {
+			if (pieceToTake == null) {
+				if ((fileDiff == 0) && (rankDiff == -1 || (rankDiff == -2 && fromRank == 7))) {
+					return true;
+				}
+			}
+			else {
+				if (fileDiff == 1 & rankDiff == -1) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+
+		return true;
+	}
+
 }
