@@ -67,12 +67,8 @@ public class Chess {
 		
 
 		//Check if there is piece where we are trying to move
-		ReturnPiece pieceToTake = null;
-		for (ReturnPiece p : pieces) {
-			if (p.pieceFile == toFile && p.pieceRank == toRank) {
-				pieceToTake = p;
-			}
-		}
+		ReturnPiece pieceToTake = checkForPiece(toFile, toRank);
+
 		if (pieceToTake != null) { //Ensure you don't take your own piece
 			if (pieceToTake.pieceType.toString().charAt(0) == pieceToMove.pieceType.toString().charAt(0)) {
 				result.message = ReturnPlay.Message.ILLEGAL_MOVE;
@@ -110,7 +106,6 @@ public class Chess {
 
 		/*
 		TO ADD:
-		Rules for each piece's movement
 		Logic for special moves: castling, promotion
 		Checks, checkmate, stalemate
 		Can't make moves that place you in check
@@ -127,6 +122,15 @@ public class Chess {
 		PlayChess.printBoard(pieces);
 	}
 
+	public static ReturnPiece checkForPiece(ReturnPiece.PieceFile toFile, int toRank) {
+		ReturnPiece z = null;
+		for (ReturnPiece p : pieces) {
+			if (p.pieceFile == toFile && p.pieceRank == toRank) {
+				z = p;
+			}
+		}
+		return z;
+	}
 
 	public static void initializeAllPieces() {
 		// Back rank order (same for white and black)
@@ -197,13 +201,17 @@ public class Chess {
 		int fileDiff = Math.abs(fromFile.ordinal() - toFile.ordinal());
 		int rankDiff = toRank - fromRank;
 
+		//ensure pieces can't jump over pieces (except for knight)
+		ReturnPiece pieceInBetween = null;
+		
 		//White pawn
 		if (piece.pieceType.equals(ReturnPiece.PieceType.WP)) {
 			if (pieceToTake == null) {
 				if ((fileDiff == 0) && (rankDiff == 1 || (rankDiff == 2 && fromRank == 2))) {
 					//if you're not taking a piece, you are not changing files.
 					//you can move 1 space forward, or two if you are at rank 2.
-					return true;
+					
+					return checkForPiece(toFile, fromRank+1) == null; //make sure you don't jump over a piece
 				}
 			}
 			else {
@@ -218,7 +226,7 @@ public class Chess {
 		if (piece.pieceType.equals(ReturnPiece.PieceType.BP)) {
 			if (pieceToTake == null) {
 				if ((fileDiff == 0) && (rankDiff == -1 || (rankDiff == -2 && fromRank == 7))) {
-					return true;
+					return checkForPiece(toFile, fromRank-1) == null; //make sure you don't jump over a piece
 				}
 			}
 			else {
@@ -228,9 +236,80 @@ public class Chess {
 			}
 			return false;
 		}
+
+		rankDiff = Math.abs(rankDiff);
+
+		//Knight: Can jump over pieces. Moves 2 spaces 1 direction and 1 space a different direction.
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BN) || piece.pieceType.equals(ReturnPiece.PieceType.WN)) {
+			return (fileDiff == 2 && rankDiff == 1) || (fileDiff == 1 && rankDiff == 2);
+		}
 		
+		//Bishop
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BB) || piece.pieceType.equals(ReturnPiece.PieceType.WB)) {
+			if (!(fileDiff == rankDiff && fileDiff > 0)) {
+				return false;
+			}
+			return parseMovement(fromFile, fromRank, toFile, toRank);
+		}
+
+		//Rook
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BR) || piece.pieceType.equals(ReturnPiece.PieceType.WR)) {
+			if (!((rankDiff > 0 && fileDiff == 0) || (rankDiff == 0 && fileDiff > 0))) {
+				return false;
+			}
+			return parseMovement(fromFile, fromRank, toFile, toRank);
+		}
+
+		//Queen 
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BR) || piece.pieceType.equals(ReturnPiece.PieceType.WR)) {
+			if (!((rankDiff > 0 && fileDiff == 0) || (rankDiff == 0 && fileDiff > 0) || (fileDiff == rankDiff && fileDiff > 0))) {
+				return false;
+			}
+			return parseMovement(fromFile, fromRank, toFile, toRank);
+		}
+
+		//King
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BR) || piece.pieceType.equals(ReturnPiece.PieceType.WR)) {
+			if (!((rankDiff == 1 && fileDiff == 0) || (rankDiff == 0 && fileDiff == 1) || (fileDiff == rankDiff && fileDiff == 1))) {
+				return false;
+			}
+		}
 
 		return true;
+	}
+
+	//Checks all spaces between Original to Final position and makes sure there are no pieces there
+	static boolean parseMovement(ReturnPiece.PieceFile fromFile, int fromRank, ReturnPiece.PieceFile toFile, int toRank) {
+		//indicates what direction it's going (left/right, up/down)
+		int fileStep = 0;
+		if (!(fromFile.equals(toFile))) {
+			fileStep = (toFile.ordinal() > fromFile.ordinal()) ? 1 : -1;
+		}
+		int rankStep = 0;
+		if (fromRank != toRank) {
+			rankStep = (toRank > fromRank) ? 1 : -1;
+		}
+
+		int currentFileIndex = fromFile.ordinal() + fileStep;
+		int currentRank = fromRank + rankStep;
+
+		while (currentFileIndex != toFile.ordinal()
+				&& currentRank != toRank) {
+
+			ReturnPiece.PieceFile currentFile =
+				ReturnPiece.PieceFile.values()[currentFileIndex];
+
+			// Check if any piece is on this square
+			if (checkForPiece(currentFile, currentRank) != null) {
+				return false;
+			}
+
+			currentFileIndex += fileStep;
+			currentRank += rankStep;
+		}
+
+		return true;
+
 	}
 
 }
