@@ -1,12 +1,11 @@
 package chess;
-
 import java.util.ArrayList;
 
 public class Chess {
 	static ArrayList<ReturnPiece> pieces = new ArrayList<ReturnPiece>();
 	static Player currentPlayer = Player.white;
 
-        enum Player { white, black }
+    enum Player { white, black }
     
 	/**
 	 * Plays the next move for whichever player has the turn.
@@ -21,7 +20,7 @@ public class Chess {
 		ReturnPlay result = new ReturnPlay();
 		result.piecesOnBoard = pieces;
 
-		String trimmedMove = move.trim();
+		String trimmedMove = move.trim(); //removes unnecessary whitespace around String move
 		
 		if (trimmedMove.equals("resign")) {
 			if (currentPlayer == Player.black) {
@@ -32,13 +31,11 @@ public class Chess {
 			//ReturnPlay instance with pieces on board same as previous state of the board
 		}
 
-		char fromFileChar = trimmedMove.charAt(0);
+		//Initialize File and Rank values
+		ReturnPiece.PieceFile fromFile = ReturnPiece.PieceFile.valueOf((trimmedMove.substring(0, 1)));
 		int fromRank = trimmedMove.charAt(1) - '0';
-		char toFileChar = trimmedMove.charAt(3);
+		ReturnPiece.PieceFile toFile = ReturnPiece.PieceFile.valueOf((trimmedMove.substring(3, 4)));
 		int toRank = trimmedMove.charAt(4) - '0';
-
-		ReturnPiece.PieceFile fromFile = ReturnPiece.PieceFile.valueOf((String.valueOf(fromFileChar)));
-		ReturnPiece.PieceFile toFile = ReturnPiece.PieceFile.valueOf((String.valueOf(toFileChar)));
 
 		//Find piece we are trying to move
 		ReturnPiece pieceToMove = null;
@@ -63,9 +60,6 @@ public class Chess {
 			return result;
 		}
 
-		
-		
-
 		//Check if there is piece where we are trying to move
 		ReturnPiece pieceToTake = checkForPiece(toFile, toRank);
 
@@ -83,9 +77,16 @@ public class Chess {
 		}
 		pieces.remove(pieceToTake);
 
-		//Move piece
-		pieceToMove.pieceFile = toFile;
-		pieceToMove.pieceRank = toRank;
+		//Move piece - must be handled seperately for promotions because it removes pawn and adds new promoted piece
+		if (!((pieceToMove.pieceType.equals(ReturnPiece.PieceType.WP) && toRank == 8) ||
+			(pieceToMove.pieceType.equals(ReturnPiece.PieceType.BP) && toRank == 1))) {
+				pieceToMove.pieceFile = toFile;
+				pieceToMove.pieceRank = toRank;
+		}
+		else {
+			promoting(pieceToMove, toFile, toRank, trimmedMove);
+		}
+		
 		
 		if (trimmedMove.length() > 5) {
 			if (trimmedMove.substring(6).equals("draw?")) {
@@ -96,17 +97,12 @@ public class Chess {
 		
 		
 		//Switch player
-		if (currentPlayer == Player.white) {
-			currentPlayer = Player.black;
-		}
-		else {currentPlayer = Player.white;}
-		
+		currentPlayer = (currentPlayer == Player.white) ? Player.black : Player.white;
 		
 		return result;
 
 		/*
 		TO ADD:
-		Logic for special moves: castling, promotion
 		Checks, checkmate, stalemate
 		Can't make moves that place you in check
 		*/
@@ -122,6 +118,12 @@ public class Chess {
 		PlayChess.printBoard(pieces);
 	}
 
+	/**
+	 * Checks if there is a piece on specified square
+	 * @param toFile
+	 * @param toRank
+	 * @return Piece if one exists, or null if there is no piece there
+	 */
 	public static ReturnPiece checkForPiece(ReturnPiece.PieceFile toFile, int toRank) {
 		ReturnPiece z = null;
 		for (ReturnPiece p : pieces) {
@@ -132,6 +134,9 @@ public class Chess {
 		return z;
 	}
 
+	/**
+	 * Initializes all pieces to starting position in pieces Array
+	 */
 	public static void initializeAllPieces() {
 		// Back rank order (same for white and black)
 		ReturnPiece.PieceType[] whiteBackRank = {
@@ -197,21 +202,27 @@ public class Chess {
 		}
 	}	
 
+	/**
+	 * Handles logic for all pieces to make sure a move is valid
+	 * @param piece
+	 * @param fromFile
+	 * @param fromRank
+	 * @param toFile
+	 * @param toRank
+	 * @param pieceToTake
+	 * @return True if piece can be moved
+	 */
 	public static boolean CheckMove(ReturnPiece piece, ReturnPiece.PieceFile fromFile, int fromRank, ReturnPiece.PieceFile toFile, int toRank, ReturnPiece pieceToTake) {
 		int fileDiff = Math.abs(fromFile.ordinal() - toFile.ordinal());
 		int rankDiff = toRank - fromRank;
 
-		//ensure pieces can't jump over pieces (except for knight)
-		ReturnPiece pieceInBetween = null;
-		
 		//White pawn
 		if (piece.pieceType.equals(ReturnPiece.PieceType.WP)) {
 			if (pieceToTake == null) {
 				if ((fileDiff == 0) && (rankDiff == 1 || (rankDiff == 2 && fromRank == 2))) {
 					//if you're not taking a piece, you are not changing files.
 					//you can move 1 space forward, or two if you are at rank 2.
-					
-					return checkForPiece(toFile, fromRank+1) == null; //make sure you don't jump over a piece
+					return parseMovement(fromFile, fromRank, toFile, toRank); //make sure you don't jump over a piece
 				}
 			}
 			else {
@@ -226,7 +237,7 @@ public class Chess {
 		if (piece.pieceType.equals(ReturnPiece.PieceType.BP)) {
 			if (pieceToTake == null) {
 				if ((fileDiff == 0) && (rankDiff == -1 || (rankDiff == -2 && fromRank == 7))) {
-					return checkForPiece(toFile, fromRank-1) == null; //make sure you don't jump over a piece
+					return parseMovement(fromFile, fromRank, toFile, toRank); //make sure you don't jump over a piece
 				}
 			}
 			else {
@@ -261,7 +272,7 @@ public class Chess {
 		}
 
 		//Queen 
-		if (piece.pieceType.equals(ReturnPiece.PieceType.BR) || piece.pieceType.equals(ReturnPiece.PieceType.WR)) {
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BQ) || piece.pieceType.equals(ReturnPiece.PieceType.WQ)) {
 			if (!((rankDiff > 0 && fileDiff == 0) || (rankDiff == 0 && fileDiff > 0) || (fileDiff == rankDiff && fileDiff > 0))) {
 				return false;
 			}
@@ -269,7 +280,18 @@ public class Chess {
 		}
 
 		//King
-		if (piece.pieceType.equals(ReturnPiece.PieceType.BR) || piece.pieceType.equals(ReturnPiece.PieceType.WR)) {
+		if (piece.pieceType.equals(ReturnPiece.PieceType.BK) || piece.pieceType.equals(ReturnPiece.PieceType.WK)) {
+			//Checks for conditions for castling
+			if ((fromFile == ReturnPiece.PieceFile.e) && 
+				((piece.pieceType.equals(ReturnPiece.PieceType.WK) && fromRank == 1) ||
+				(piece.pieceType.equals(ReturnPiece.PieceType.BK) && fromRank == 8))
+				&& (toRank == 1 && (toFile == ReturnPiece.PieceFile.g || toFile == ReturnPiece.PieceFile.c))) {
+					if (parseMovement(fromFile, fromRank, toFile, toRank)) {
+						return castling(fromFile, fromRank, toFile, toRank, piece.pieceType);
+					}
+					else {return false;}
+				} 
+			
 			if (!((rankDiff == 1 && fileDiff == 0) || (rankDiff == 0 && fileDiff == 1) || (fileDiff == rankDiff && fileDiff == 1))) {
 				return false;
 			}
@@ -278,7 +300,84 @@ public class Chess {
 		return true;
 	}
 
-	//Checks all spaces between Original to Final position and makes sure there are no pieces there
+	/**
+	 * Replaces existing pawn with desired piece. 
+	 * @param currPiece
+	 * @param toFile
+	 * @param toRank
+	 * @param move
+	 */
+	static void promoting(ReturnPiece currPawn, ReturnPiece.PieceFile toFile, int toRank, String move) {
+		String promoteTo = currPawn.pieceType.toString().substring(0, 1);
+		if (move.length() == 7) {
+			promoteTo += move.substring(6, 7);
+		}
+		else {promoteTo += "Q";}
+		ReturnPiece newPiece = new ReturnPiece();
+		newPiece.pieceType = ReturnPiece.PieceType.valueOf(promoteTo);
+		newPiece.pieceRank = toRank;
+		newPiece.pieceFile = toFile;
+		pieces.add(newPiece);
+		pieces.remove(currPawn);
+	}
+
+	/**
+	 * Handles castling, makes sure king and rook are in correct position for castling
+	 * @param fromFile
+	 * @param fromRank
+	 * @param toFile
+	 * @param toRank
+	 * @param color
+	 * @return True if executed properly
+	 */
+	static boolean castling(ReturnPiece.PieceFile fromFile, int fromRank, ReturnPiece.PieceFile toFile, int toRank, ReturnPiece.PieceType color) {
+		ReturnPiece rookToMove;
+		if (color.equals(ReturnPiece.PieceType.WK)) {
+			if (toFile.equals(ReturnPiece.PieceFile.g)) {
+				rookToMove = checkForPiece(ReturnPiece.PieceFile.h, 1);
+				if (rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
+					rookToMove.pieceFile = ReturnPiece.PieceFile.f;
+					return true;
+				}
+			}
+			else { //castling queen side
+				rookToMove = checkForPiece(ReturnPiece.PieceFile.a, 1);
+					if (rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
+						rookToMove.pieceFile = ReturnPiece.PieceFile.d;
+						return true;
+					}
+				}
+			}
+		
+		else {// black king
+			if (toFile.equals(ReturnPiece.PieceFile.g)) {
+				rookToMove = checkForPiece(ReturnPiece.PieceFile.h, 8);
+				if (rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
+					rookToMove.pieceFile = ReturnPiece.PieceFile.f;
+					return true;
+				}
+			}
+			else { //castling queen side
+				rookToMove = checkForPiece(ReturnPiece.PieceFile.a, 8); 
+					if (rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
+						rookToMove.pieceFile = ReturnPiece.PieceFile.d;
+						return true;
+					}
+				}
+			}
+		return false;
+		}
+	
+
+	/**
+	 * Checks all spaces between Original to Final position and makes sure there are no pieces that you would be jumping over
+	
+	 * @param fromFile
+	 * @param fromRank
+	 * @param toFile
+	 * @param toRank
+	 * @return True if this move is valid
+	 */
 	static boolean parseMovement(ReturnPiece.PieceFile fromFile, int fromRank, ReturnPiece.PieceFile toFile, int toRank) {
 		//indicates what direction it's going (left/right, up/down)
 		int fileStep = 0;
@@ -294,7 +393,7 @@ public class Chess {
 		int currentRank = fromRank + rankStep;
 
 		while (currentFileIndex != toFile.ordinal()
-				&& currentRank != toRank) {
+				|| currentRank != toRank) {
 
 			ReturnPiece.PieceFile currentFile =
 				ReturnPiece.PieceFile.values()[currentFileIndex];
