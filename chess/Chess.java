@@ -120,6 +120,8 @@ public class Chess {
 			{
 				result.message = ReturnPlay.Message.CHECK;
 			}
+		}
+		else {
 			if (!CanMove)
 			{
 				result.message = ReturnPlay.Message.STALEMATE;
@@ -213,6 +215,7 @@ public class Chess {
 	 * This method should reset the game, and start from scratch.
 	 */
 	public static void start() {
+		currentPlayer = Player.white;
 		pieces.clear();
 		initializeAllPieces();
 		PlayChess.printBoard(pieces);
@@ -326,7 +329,7 @@ public class Chess {
 				}
 			}
 			else {
-				if (fileDiff == 1 & rankDiff == 1) {
+				if (fileDiff == 1 && rankDiff == 1) {
 					return true;
 				}
 			}
@@ -341,7 +344,7 @@ public class Chess {
 				}
 			}
 			else {
-				if (fileDiff == 1 & rankDiff == -1) {
+				if (fileDiff == 1 && rankDiff == -1) {
 					return true;
 				}
 			}
@@ -435,14 +438,16 @@ public class Chess {
 		if (color.equals(ReturnPiece.PieceType.WK)) {
 			if (toFile.equals(ReturnPiece.PieceFile.g)) {
 				rookToMove = checkForPiece(ReturnPiece.PieceFile.h, 1);
-				if (rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
+				if (rookToMove != null &&
+					rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
 					rookToMove.pieceFile = ReturnPiece.PieceFile.f;
 					return true;
 				}
 			}
 			else { //castling queen side
 				rookToMove = checkForPiece(ReturnPiece.PieceFile.a, 1);
-					if (rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
+					if (rookToMove != null &&
+						rookToMove.pieceType.equals(ReturnPiece.PieceType.WR)) {
 						rookToMove.pieceFile = ReturnPiece.PieceFile.d;
 						return true;
 					}
@@ -452,14 +457,16 @@ public class Chess {
 		else {// black king
 			if (toFile.equals(ReturnPiece.PieceFile.g)) {
 				rookToMove = checkForPiece(ReturnPiece.PieceFile.h, 8);
-				if (rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
+				if (rookToMove != null &&
+					rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
 					rookToMove.pieceFile = ReturnPiece.PieceFile.f;
 					return true;
 				}
 			}
 			else { //castling queen side
 				rookToMove = checkForPiece(ReturnPiece.PieceFile.a, 8); 
-					if (rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
+					if (rookToMove != null &&
+						rookToMove.pieceType.equals(ReturnPiece.PieceType.BR)) {
 						rookToMove.pieceFile = ReturnPiece.PieceFile.d;
 						return true;
 					}
