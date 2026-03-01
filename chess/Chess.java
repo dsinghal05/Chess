@@ -75,7 +75,15 @@ public class Chess {
 			result.message = ReturnPlay.Message.ILLEGAL_MOVE;
 			return result;
 		}
-		pieces.remove(pieceToTake);
+		if (CurrentlyInCheck(pieceToMove, toFile, toRank, pieceToTake))
+		{
+			result.message = ReturnPlay.Message.ILLEGAL_MOVE;
+			return result;
+		}
+		if(pieceToTake != null)
+		{
+			pieces.remove(pieceToTake);
+		}
 
 		//Move piece - must be handled seperately for promotions because it removes pawn and adds new promoted piece
 		if (!((pieceToMove.pieceType.equals(ReturnPiece.PieceType.WP) && toRank == 8) ||
@@ -98,16 +106,108 @@ public class Chess {
 		
 		//Switch player
 		currentPlayer = (currentPlayer == Player.white) ? Player.black : Player.white;
-		
-		return result;
 
-		/*
-		TO ADD:
-		Checks, checkmate, stalemate
-		Can't make moves that place you in check
-		*/
+		boolean InCheck = KingChecked(currentPlayer);
+		boolean CanMove = LegalMoves (currentPlayer);
+		
+		if(InCheck)
+		{
+			if(!CanMove)
+			{
+				result.message = (currentPlayer == Player.white) ? ReturnPlay.Message.CHECKMATE_BLACK_WINS : ReturnPlay.Message.CHECKMATE_WHITE_WINS;
+			}
+			else
+			{
+				result.message = ReturnPlay.Message.CHECK;
+			}
+			if (!CanMove)
+			{
+				result.message = ReturnPlay.Message.STALEMATE;
+			}
+		}
+		return result;
 	}
 	
+	private static boolean CurrentlyInCheck(ReturnPiece piece, ReturnPiece.PieceFile toF, int toR, ReturnPiece taken)
+	{
+		ReturnPiece.PieceFile oldF = piece.pieceFile;
+		int oldR = piece.pieceRank;
+		piece.pieceFile = toF;
+		piece.pieceRank = toR;
+		if(taken != null)
+		{
+			pieces.remove(taken);
+		}
+		boolean InCheck = KingChecked(currentPlayer);
+		piece.pieceFile = oldF;
+		piece.pieceRank = oldR;
+		if(taken != null)
+		{
+			pieces.add(taken);
+		}
+		return InCheck;
+	}
+	private static boolean KingChecked(Player player)
+	{
+		ReturnPiece king = null;
+		String kingName = (player == Player.white) ? "WK" : "BK";
+		for(ReturnPiece p : pieces)
+		{
+			if(p.pieceType.toString().equals(kingName))
+			{
+				king = p;
+				break;
+			}
+		}
+		if(king == null)
+		{
+			return false;
+		}
+		for(ReturnPiece p : pieces)
+		{
+			if(p.pieceType.toString().charAt(0) != kingName.charAt(0))
+			{
+				if(CheckMove(p, p.pieceFile, p.pieceRank, king.pieceFile, king.pieceRank, king))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	private static boolean LegalMoves(Player player)
+	{
+		ArrayList<ReturnPiece> playerPieces = new ArrayList<>();
+		for(ReturnPiece p : pieces)
+		{
+			if((player == Player.white && p.pieceType.toString().startsWith("W")) || (player == Player.black && p.pieceType.toString().startsWith("B")))
+			{
+				playerPieces.add(p);
+			}
+		}
+		for(ReturnPiece p : playerPieces)
+		{
+			for(ReturnPiece.PieceFile f : ReturnPiece.PieceFile.values())
+			{
+				for(int r = 1; r <= 8; r++)
+				{
+					ReturnPiece target = checkForPiece(f, r);
+					if(target != null && target.pieceType.toString().charAt(0) == p.pieceType.toString().charAt(0))
+					{
+						continue;
+					}
+					if (CheckMove(p, p.pieceFile, p.pieceRank, f, r, target)) 
+					{
+						if (!CurrentlyInCheck(p, f, r, target)) 
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
 	
 	/**
 	 * This method should reset the game, and start from scratch.
