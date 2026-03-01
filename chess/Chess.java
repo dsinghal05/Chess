@@ -1,3 +1,4 @@
+//By Divit Singhal and Premton Syla
 package chess;
 import java.util.ArrayList;
 
