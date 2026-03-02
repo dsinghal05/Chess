@@ -7,6 +7,13 @@ public class Chess {
 	static Player currentPlayer = Player.white;
 
     enum Player { white, black }
+	static ReturnPiece lastMovedPawn = null;
+	static boolean whiteKingMoved = false;
+	static boolean blackKingMoved = false;
+	static boolean whiteRookAMoved = false;
+	static boolean whiteRookHMoved = false;
+	static boolean blackRookAMoved = false;
+	static boolean blackRookHMoved = false;
     
 	/**
 	 * Plays the next move for whichever player has the turn.
@@ -329,6 +336,14 @@ public class Chess {
 					return parseMovement(fromFile, fromRank, toFile, toRank); //make sure you don't jump over a piece
 				}
 			}
+			if (pieceToTake == null && fileDiff == 1 && rankDiff == 1) 
+			{
+    			ReturnPiece potentialPawn = checkForPiece(toFile, fromRank);
+    			if (potentialPawn == lastMovedPawn && potentialPawn != null && potentialPawn.pieceType == ReturnPiece.PieceType.BP) 
+				{
+        			return true;
+    			}
+			}
 			else {
 				if (fileDiff == 1 && rankDiff == 1) {
 					return true;
@@ -344,6 +359,13 @@ public class Chess {
 					return parseMovement(fromFile, fromRank, toFile, toRank); //make sure you don't jump over a piece
 				}
 			}
+			if (fileDiff == 1 && rankDiff == -1 && lastMovedPawn != null) 
+			{
+                if (lastMovedPawn.pieceRank == fromRank && lastMovedPawn.pieceFile == toFile) 
+				{
+                    return true;
+                }
+            }
 			else {
 				if (fileDiff == 1 && rankDiff == -1) {
 					return true;
@@ -389,19 +411,16 @@ public class Chess {
 			if ((fromFile == ReturnPiece.PieceFile.e) && 
 				((piece.pieceType.equals(ReturnPiece.PieceType.WK) && fromRank == 1) ||
 				(piece.pieceType.equals(ReturnPiece.PieceType.BK) && fromRank == 8))
-				&& (toRank == 1 && (toFile == ReturnPiece.PieceFile.g || toFile == ReturnPiece.PieceFile.c))) {
-					if (parseMovement(fromFile, fromRank, toFile, toRank)) {
-						return castling(fromFile, fromRank, toFile, toRank, piece.pieceType);
-					}
-					else {return false;}
-				} 
-			
-			if (!((rankDiff == 1 && fileDiff == 0) || (rankDiff == 0 && fileDiff == 1) || (fileDiff == rankDiff && fileDiff == 1))) {
-				return false;
-			}
-		}
-
-		return true;
+				&& (toRank == fromRank && (toFile == ReturnPiece.PieceFile.g || toFile == ReturnPiece.PieceFile.c))) 
+			{
+                return castling(fromFile, fromRank, toFile, toRank, piece.pieceType);
+            } 
+        	if (!((rankDiff == 1 && fileDiff == 0) || (rankDiff == 0 && fileDiff == 1) || (fileDiff == rankDiff && fileDiff == 1))) 
+			{
+            	return false;
+        	}
+    	}
+    	return true;
 	}
 
 	/**
